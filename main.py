@@ -4,7 +4,7 @@ import pandas as pd
 import requests
 import json
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import logging
 from pathlib import Path
 
@@ -181,14 +181,18 @@ def get_Telemetry(deviceId, start, end, access_token, logger):
         logger.error(f"Error in get_Telemetry: {e}")
         print(e)
 
-    df = pd.DataFrame(l_rows)
-    # convert 'timestamp' column to '%Y-%m-%d %H:%M:%S'
-    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+    if not l_rows:
+        print("No data found")
+        return pd.DataFrame(), l_rows
+    else:
+        df = pd.DataFrame(l_rows)
+        # Convert 'timestamp' column to '%Y-%m-%d %H:%M:%S'
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
 
-    # format timestamp "YYYY-MM-DDTHH:MM:SS.MSMSMSMSMSMSZ"
-    df["timestamp"] = (
-        pd.to_datetime(df["timestamp"]).dt.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
-    )
+        # format timestamp from "YYYY-MM-DD HH:MM:SS" to "YYYY-MM-DDTHH:MM:SS.MSMSMSMSMSMSZ"
+        df["timestamp"] = (
+            pd.to_datetime(df["timestamp"]).dt.strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+        )  
 
     return df, l_rows
 
@@ -196,7 +200,7 @@ def get_Telemetry(deviceId, start, end, access_token, logger):
 def get_IoT_data(access_token, deviceId, period, delay, logger):
     try:
         # set start/end time
-        end_date = datetime.utcnow() - timedelta(days=delay)
+        end_date = datetime.now(UTC) - timedelta(days=delay)
         start_date = end_date - timedelta(hours=period)
 
         start_str = start_date.strftime("%Y-%m-%dT%H:%M:%S") + ".000Z"
